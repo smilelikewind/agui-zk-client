@@ -6,67 +6,61 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by gui.a on 2018/3/14.
  *
  * @author xiaowei.li
  */
-public class ZKClient implements Watcher{
+public class ZKClient implements Watcher {
 
+    /**
+     * 类变量
+     */
     private static ZKClient zk;
 
+    /**
+     * 实例变量
+     */
     private ZooKeeper zookeeper;
+    private volatile AtomicBoolean IS_STOP = new AtomicBoolean(false);
     private CountDownLatch countDownLatch = new CountDownLatch(1);
-    private Thread monitorThread;
-    public ZKClient(){
 
+    public ZKClient() {
         try {
-            this.zookeeper = new  ZooKeeper(ZKConstants.zkServerAddress,ZKConstants.sessionTimeOut,this);
+            this.zookeeper = new ZooKeeper(ZKConstants.zkServerAddress, ZKConstants.sessionTimeOut, this);
             countDownLatch.await();
-            monitorThread = new Thread(new ZKClientMonitorThread(),"zkClientMonitorThread");
-            monitorThread.start();
         } catch (Exception e) {
-            throw new RuntimeException("[ZKClient] create zk instance wrong",e);
+            throw new RuntimeException("[ZKClient] create zk instance wrong", e);
         }
     }
 
-    public void shutDown()throws Exception{
-        monitorThread.interrupt();
-        zookeeper.close();
-    }
-
-    public static void close(){
-        try {
-            zk.shutDown();
-        } catch (Exception e) {
-            throw new RuntimeException("[ZKClient]  close zk instance wrong",e);
-        }
-    }
-
-    public class ZKClientMonitorThread implements Runnable{
-
-        @Override
-        public void run() {
-            while (!Thread.interrupted()) {
-                try {
-
-                    System.out.println("[monitor] check zk client state");
-
-                    if (zookeeper != null && !zookeeper.getState().isAlive()) {
-                        System.out.println("[monitor] close current zk");
-                        zookeeper.close();
-                        zk = new ZKClient();
-                        System.out.println("[monitor] create a new current zk");
-                    }
-                    Thread.sleep(ZKConstants.zkMonitorExecuteIntervalTime);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+    private void shutDown(){
+        if (IS_STOP.compareAndSet(false, true)) {
+            try {
+                zookeeper.close();
+                zk = null;
+            } catch (InterruptedException e) {
+                throw new RuntimeException("close zk error",e);
             }
         }
     }
 
+    private boolean isActive(){
+        return zookeeper != null && zookeeper.getState().isAlive();
+    }
+
+
+    public static boolean isAlive(){
+        return zk != null && zk.isActive();
+    }
+
+    public static void close(){
+        if (zk != null){
+            zk.shutDown();
+        }
+    }
 
     public static ZKClient getInstance() {
 
@@ -88,7 +82,7 @@ public class ZKClient implements Watcher{
     @Override
     public void process(WatchedEvent event) {
 
-        if (event != null && event.getState() == Event.KeeperState.SyncConnected){
+        if (event != null && event.getState() == Event.KeeperState.SyncConnected) {
             System.out.println("zk connected success");
             this.countDownLatch.countDown();
         }
@@ -96,10 +90,9 @@ public class ZKClient implements Watcher{
         System.out.println("[ZKClient] zk event is: " + JSON.toJSONString(event));
     }
 
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
         ZKClient.getInstance();
-        Thread.sleep(10 * 1000);
-        ZKClient.close();
+        Thread.sleep(100 * 1000);
         System.out.println("[main] success");
     }
 }
