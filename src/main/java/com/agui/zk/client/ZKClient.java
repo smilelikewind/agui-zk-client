@@ -24,7 +24,7 @@ public class ZKClient implements Watcher {
      * 实例变量
      */
     private ZooKeeper zookeeper;
-    private volatile AtomicBoolean IS_STOP = new AtomicBoolean(false);
+    private volatile AtomicBoolean isStop = new AtomicBoolean(false);
     private CountDownLatch countDownLatch = new CountDownLatch(1);
 
     public ZKClient() {
@@ -37,10 +37,9 @@ public class ZKClient implements Watcher {
     }
 
     private void shutDown(){
-        if (IS_STOP.compareAndSet(false, true)) {
+        if (isStop.compareAndSet(false, true)) {
             try {
                 zookeeper.close();
-                zk = null;
             } catch (InterruptedException e) {
                 throw new RuntimeException("close zk error",e);
             }
@@ -51,14 +50,23 @@ public class ZKClient implements Watcher {
         return zookeeper != null && zookeeper.getState().isAlive();
     }
 
+    private boolean isConnected(){
+        return zookeeper != null && zookeeper.getState().isConnected();
+    }
+
 
     public static boolean isAlive(){
         return zk != null && zk.isActive();
     }
 
+    public static boolean isOnline(){
+        return zk != null && zk.isConnected();
+    }
+
     public static void close(){
         if (zk != null){
             zk.shutDown();
+            zk = null;
         }
     }
 
@@ -74,6 +82,7 @@ public class ZKClient implements Watcher {
                 return zk;
             }
             zk = new ZKClient();
+            ZKClientMonitor.startMonitor();
         }
 
         return zk;

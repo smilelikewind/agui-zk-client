@@ -7,11 +7,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * @author xiaowei.li
  */
-public class ZKClientMonitorThread extends Thread{
+public class ZKClientMonitor extends Thread {
 
     private static AtomicBoolean isStart = new AtomicBoolean(false);
 
-    public ZKClientMonitorThread(String threadName){
+    public ZKClientMonitor(String threadName) {
         super(threadName);
     }
 
@@ -19,13 +19,15 @@ public class ZKClientMonitorThread extends Thread{
     public void run() {
         while (true) {
             try {
-                if (!ZKClient.isAlive()) {
+                if (!ZKClient.isOnline() && !ZKClient.isAlive()){
                     System.out.println("[monitor] close current zk");
                     ZKClient.close();
                     ZKClient.getInstance();
                     System.out.println("[monitor] create a new current zk");
-                } else {
-                    System.out.println("[monitor] zk client ok!");
+                } else if (ZKClient.isOnline()){
+                    System.out.println("[monitor] zk client ok");
+                } else if (ZKClient.isAlive()){
+                    System.out.println("[monitor] zk client is connecting");
                 }
                 Thread.sleep(ZKConstants.zkMonitorExecuteIntervalTime);
             } catch (Exception e) {
@@ -34,9 +36,9 @@ public class ZKClientMonitorThread extends Thread{
         }
     }
 
-    public static void startMonitor(){
-        if (isStart.compareAndSet(false,true)){
-            new ZKClientMonitorThread("zk client monitor").start();
+    public static void startMonitor() {
+        if (isStart.compareAndSet(false, true)) {
+            new ZKClientMonitor("zk client monitor").start();
         }
     }
 }
