@@ -24,6 +24,9 @@ public class ZKClientMonitor extends Thread {
             try {
                 if (!zkClient.isActive() && !zkClient.isConnected()){
                     System.out.println("[monitor] close current zk");
+                    /**
+                     * 把当前的zkClient关闭掉
+                     */
                     zkClient.close();
                     /**
                      * 创建一个新的Client实例，并创建的实例赋值给this.client
