@@ -117,6 +117,7 @@ public class ZKClient implements Watcher {
 
     public void close(){
         if (hasStop.compareAndSet(false, true)) {
+            zk = null;
             try {
                 zookeeper.close();
             } catch (InterruptedException e) {
@@ -155,7 +156,7 @@ public class ZKClient implements Watcher {
 
     public static void main(String[] args) throws Exception {
         ZKClient.getInstance();
-        Thread.sleep(100 * 1000);
+        Thread.sleep(1000 * 1000);
         System.out.println("[main] success");
     }
 }

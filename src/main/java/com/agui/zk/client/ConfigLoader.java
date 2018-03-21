@@ -23,7 +23,7 @@ public class ConfigLoader {
             //设置并发数为5，即同一时间最多只能有5个线程往cache执行写入操作
             .concurrencyLevel(20)
             //设置cache中的数据在写入之后的存活时间为10秒
-            .expireAfterWrite(6, TimeUnit.MICROSECONDS)
+            .expireAfterWrite(6, TimeUnit.MINUTES)
             //构建cache实例
             .build();
     private static ConcurrentHashMap<String,Watcher> zkWatcher = new ConcurrentHashMap<String, Watcher>();
