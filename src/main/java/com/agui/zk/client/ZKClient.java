@@ -21,52 +21,42 @@ public class ZKClient implements Watcher {
     private static ZKClient zk;
 
     /**
-     * 实例变量
+     * zookeeper 实例变量
      */
     private ZooKeeper zookeeper;
-    private volatile AtomicBoolean isStop = new AtomicBoolean(false);
-    private CountDownLatch countDownLatch = new CountDownLatch(1);
+
+    /**
+     * 仅允许关闭一次
+     */
+    private volatile AtomicBoolean hasStop = new AtomicBoolean(false);
+
+    private CountDownLatch countDownLatch = new CountDownLatch(1);;
 
     public ZKClient() {
         try {
             this.zookeeper = new ZooKeeper(ZKConstants.zkServerAddress, ZKConstants.sessionTimeOut, this);
-            countDownLatch.await();
+            this.countDownLatch.await();
         } catch (Exception e) {
             throw new RuntimeException("[ZKClient] create zk instance wrong", e);
         }
     }
 
-    private void shutDown(){
-        if (isStop.compareAndSet(false, true)) {
+    public boolean isActive(){
+        return zookeeper != null && zookeeper.getState().isAlive();
+    }
+
+    public boolean isConnected(){
+        return zookeeper != null && zookeeper.getState().isConnected();
+    }
+
+
+    public void close(){
+        if (hasStop.compareAndSet(false, true)) {
             try {
                 zookeeper.close();
             } catch (InterruptedException e) {
                 throw new RuntimeException("close zk error",e);
             }
-        }
-    }
-
-    private boolean isActive(){
-        return zookeeper != null && zookeeper.getState().isAlive();
-    }
-
-    private boolean isConnected(){
-        return zookeeper != null && zookeeper.getState().isConnected();
-    }
-
-
-    public static boolean isAlive(){
-        return zk != null && zk.isActive();
-    }
-
-    public static boolean isOnline(){
-        return zk != null && zk.isConnected();
-    }
-
-    public static void close(){
-        if (zk != null){
-            zk.shutDown();
-            zk = null;
         }
     }
 
@@ -82,9 +72,8 @@ public class ZKClient implements Watcher {
                 return zk;
             }
             zk = new ZKClient();
-            ZKClientMonitor.startMonitor();
+            ZKClientMonitor.startMonitor(zk);
         }
-
         return zk;
     }
 

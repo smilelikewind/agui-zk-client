@@ -11,22 +11,28 @@ public class ZKClientMonitor extends Thread {
 
     private static AtomicBoolean isStart = new AtomicBoolean(false);
 
-    public ZKClientMonitor(String threadName) {
+    private ZKClient zkClient;
+
+    public ZKClientMonitor(String threadName,ZKClient zkClient) {
         super(threadName);
+        this.zkClient = zkClient;
     }
 
     @Override
     public void run() {
         while (true) {
             try {
-                if (!ZKClient.isOnline() && !ZKClient.isAlive()){
+                if (!zkClient.isActive() && !zkClient.isConnected()){
                     System.out.println("[monitor] close current zk");
-                    ZKClient.close();
-                    ZKClient.getInstance();
+                    zkClient.close();
+                    /**
+                     * 创建一个新的Client实例，并创建的实例赋值给this.client
+                     */
+                    zkClient = ZKClient.getInstance();
                     System.out.println("[monitor] create a new current zk");
-                } else if (ZKClient.isOnline()){
+                } else if (zkClient.isConnected()){
                     System.out.println("[monitor] zk client ok");
-                } else if (ZKClient.isAlive()){
+                } else if (zkClient.isActive()){
                     System.out.println("[monitor] zk client is connecting");
                 }
                 Thread.sleep(ZKConstants.zkMonitorExecuteIntervalTime);
@@ -36,9 +42,9 @@ public class ZKClientMonitor extends Thread {
         }
     }
 
-    public static void startMonitor() {
+    public static void startMonitor(ZKClient zkClient) {
         if (isStart.compareAndSet(false, true)) {
-            new ZKClientMonitor("zk client monitor").start();
+            new ZKClientMonitor("zk client monitor",zkClient).start();
         }
     }
 }
