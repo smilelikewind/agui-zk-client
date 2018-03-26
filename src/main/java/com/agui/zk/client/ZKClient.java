@@ -34,11 +34,12 @@ public class ZKClient implements Watcher {
      */
     private volatile AtomicBoolean hasStop = new AtomicBoolean(false);
 
-    private CountDownLatch countDownLatch = new CountDownLatch(1);;
+    private CountDownLatch countDownLatch;
 
 
     public ZKClient() {
         try {
+            countDownLatch = new CountDownLatch(1);
             this.zookeeper = new ZooKeeper(ZKConstants.zkServerAddress, ZKConstants.sessionTimeOut, this);
             this.countDownLatch.await();
         } catch (Exception e) {
@@ -118,6 +119,7 @@ public class ZKClient implements Watcher {
     public void close(){
         if (hasStop.compareAndSet(false, true)) {
             zk = null;
+            countDownLatch = null;
             try {
                 zookeeper.close();
             } catch (InterruptedException e) {
