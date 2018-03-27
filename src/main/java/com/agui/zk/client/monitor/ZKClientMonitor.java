@@ -1,6 +1,7 @@
 package com.agui.zk.client.monitor;
 
 import com.agui.zk.client.ZKClient;
+import com.agui.zk.client.common.TimeUtil;
 import com.agui.zk.client.constants.ZKConstants;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,6 +33,10 @@ public class ZKClientMonitor extends Thread {
                      */
                     zkClient.close();
                     /**
+                     * 睡5秒
+                     */
+                    TimeUtil.sleep(5);
+                    /**
                      * 创建一个新的Client实例，并创建的实例赋值给this.client
                      */
                     zkClient = ZKClient.getInstance();
@@ -43,7 +48,7 @@ public class ZKClientMonitor extends Thread {
                 }
                 Thread.sleep(ZKConstants.zkMonitorExecuteIntervalTime);
             } catch (Exception e) {
-                e.printStackTrace();
+                TimeUtil.sleep(15);
             }
         }
     }
