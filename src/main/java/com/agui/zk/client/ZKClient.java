@@ -1,6 +1,8 @@
 package com.agui.zk.client;
 
 import com.alibaba.fastjson.JSON;
+import com.lingshou.util.logger.LoggerFactory;
+import com.lingshou.util.logger.LoggerWrapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.ACL;
@@ -19,31 +21,38 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ZKClient implements Watcher {
 
+
+    static LoggerWrapper INFO = LoggerFactory.getValue(Logger.ZK_INFO);
+
+    static LoggerWrapper ERROR = LoggerFactory.getValue(Logger.ZK_ERROR);
     /**
      * 类变量
      */
     private static ZKClient zk;
 
     /**
+     * 仅允许关闭一次
+     */
+    private static AtomicBoolean IS_START = new AtomicBoolean(false);
+
+    /**
      * zookeeper 实例变量
      */
     private ZooKeeper zookeeper;
-
-    /**
-     * 仅允许关闭一次
-     */
-    private volatile AtomicBoolean hasStop = new AtomicBoolean(false);
 
     private CountDownLatch countDownLatch;
 
 
     public ZKClient() {
-        try {
-            countDownLatch = new CountDownLatch(1);
-            this.zookeeper = new ZooKeeper(ZKConstants.zkServerAddress, ZKConstants.sessionTimeOut, this);
-            this.countDownLatch.await();
-        } catch (Exception e) {
-            throw new RuntimeException("[ZKClient] create zk instance wrong", e);
+        if (IS_START.compareAndSet(false,true)){
+            try {
+                countDownLatch = new CountDownLatch(1);
+                this.zookeeper = new ZooKeeper(ZKConstants.zkServerAddress, ZKConstants.sessionTimeOut, this);
+                this.countDownLatch.await();
+            } catch (Exception e) {
+                INFO.info("connect zk error,do restart",e);
+                restart();
+            }
         }
     }
 
@@ -115,9 +124,15 @@ public class ZKClient implements Watcher {
         return zookeeper != null && zookeeper.getState().isConnected();
     }
 
+    private static void restart(){
+        zk.close();
+        TimeUtil.sleep(15);
+        ZKClient.getInstance();
+    }
+
 
     public void close(){
-        if (hasStop.compareAndSet(false, true)) {
+        if (IS_START.compareAndSet(false, true)) {
             zk = null;
             countDownLatch = null;
             try {
@@ -151,14 +166,17 @@ public class ZKClient implements Watcher {
         if (event != null && event.getState() == Event.KeeperState.SyncConnected) {
             System.out.println("zk connected success");
             this.countDownLatch.countDown();
+        } else if (event != null && event.getState() == Event.KeeperState.Expired){
+            // 链接失效后，需要清除watcher
+            // 数据暂时不清理
+            ConfigLoader.clearWathcer();
+            restart();
         }
-
-        System.out.println("[ZKClient] zk event is: " + JSON.toJSONString(event));
+        INFO.info("[ZKClient] zk event is: " + JSON.toJSONString(event));
     }
 
-    public static void main(String[] args) throws Exception {
-        ZKClient.getInstance();
-        Thread.sleep(1000 * 1000);
-        System.out.println("[main] success");
+    public static void main(String[] args) {
+        ZKClient.getInstance().create("sss","xiaowei");
+        System.out.println(ZKClient.getInstance().getData("sss",null));
     }
 }

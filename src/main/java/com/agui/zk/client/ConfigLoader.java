@@ -2,11 +2,17 @@ package com.agui.zk.client;
 
 import com.google.common.base.Function;
 import com.google.common.collect.MapMaker;
+import com.lingshou.util.logger.LoggerConstants;
+import com.lingshou.util.logger.LoggerFactory;
+import com.lingshou.util.logger.LoggerWrapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.Watcher;
+import sun.rmi.runtime.Log;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static com.agui.zk.client.Logger.ZK_INFO;
 
 /**
  * Created by gui.a on 2018/3/19.
@@ -16,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class ConfigLoader {
 
     private static ZKClient zkClient= ZKClient.getInstance();
+
 
 
     public static Map<String,String> metaDataCache = new MapMaker()
@@ -46,6 +53,13 @@ public class ConfigLoader {
     public static void remove(String key){
         zkWatcher.remove(key);
         metaDataCache.remove(key);
+    }
+
+    /**
+     * 当zkClient Expired 需要清除所有的Watcher
+     */
+    public static void clearWathcer(){
+        zkWatcher.clear();
     }
 
 }
