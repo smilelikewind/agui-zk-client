@@ -1,4 +1,4 @@
-package com.agui.zk.client;
+package com.agui.zk.client.operation;
 
 import com.alibaba.fastjson.JSON;
 import com.lingshou.util.logger.LoggerFactory;
@@ -6,7 +6,7 @@ import com.lingshou.util.logger.LoggerWrapper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
-import static com.agui.zk.client.Logger.ZK_INFO;
+import static com.agui.zk.client.common.Logger.ZK_INFO;
 
 /**
  * Created by gui.a on 2018/3/21.

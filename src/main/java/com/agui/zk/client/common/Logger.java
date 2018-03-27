@@ -1,4 +1,4 @@
-package com.agui.zk.client;
+package com.agui.zk.client.common;
 
 import com.lingshou.util.logger.INFO;
 import com.lingshou.util.logger.LoggerFactory;
