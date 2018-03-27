@@ -70,6 +70,19 @@ public class ZKClient implements Watcher {
         }
     }
 
+    public long getSessionId(){
+        return zookeeper.getSessionId();
+    }
+
+    public Stat getState(String path,Watcher watcher){
+        try {
+            Stat stat = zookeeper.exists(generatePath(path),watcher);
+            return stat;
+        } catch (Exception e) {
+            throw new RuntimeException("getState excepiton",e);
+        }
+    }
+
     public String getData(String path,Watcher watcher){
         try {
             Stat stat = zookeeper.exists(generatePath(path),false);
@@ -86,6 +99,15 @@ public class ZKClient implements Watcher {
     public boolean create(String path,String data){
         try {
             String createPath = zookeeper.create(generatePath(path),str2Byte(data),defaultAcl(), CreateMode.PERSISTENT);
+            return StringUtils.isNotBlank(createPath);
+        } catch (Exception e) {
+            throw new RuntimeException("exists excepiton",e);
+        }
+    }
+
+    public boolean createEphemeral(String path,String data){
+        try {
+            String createPath = zookeeper.create(generatePath(path),str2Byte(data),defaultAcl(), CreateMode.EPHEMERAL);
             return StringUtils.isNotBlank(createPath);
         } catch (Exception e) {
             throw new RuntimeException("exists excepiton",e);
