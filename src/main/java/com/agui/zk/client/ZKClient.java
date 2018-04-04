@@ -114,6 +114,22 @@ public class ZKClient implements Watcher {
         }
     }
 
+    public String create(String path, String data, CreateMode createMode) {
+        try {
+            return zookeeper.create(generatePath(path), str2Byte(data), defaultAcl(), createMode);
+        } catch (Exception e) {
+            throw new RuntimeException("exists excepiton", e);
+        }
+    }
+
+    public List<String> getChildren(String path) {
+        try {
+            return zookeeper.getChildren(path, false);
+        } catch (Exception e) {
+            throw new RuntimeException("getChildren exception",e);
+        }
+    }
+
     private List<ACL> defaultAcl(){
         List<ACL> acls = new ArrayList<ACL>();
         Id id1 = new Id("world","anyone");

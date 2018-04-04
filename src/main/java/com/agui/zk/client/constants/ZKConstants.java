@@ -18,4 +18,9 @@ public class ZKConstants {
     public static String basePath = "/data/agui/";
 
     public static String defaultChraterSet = "utf-8";
+
+
+    public static String LOCK_BASIC_PATH = "lock";
+
+    public static String LOCK_PATH_KEY = LOCK_BASIC_PATH + "/disKey";
 }
