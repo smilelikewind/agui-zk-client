@@ -1,6 +1,6 @@
 package com.agui.zk.client;
 
-import com.agui.zk.client.common.TimeUtil;
+import com.agui.zk.client.util.TimeUtil;
 import com.agui.zk.client.operation.ConfigLoader;
 
 /**

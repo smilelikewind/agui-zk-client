@@ -1,7 +1,7 @@
 package com.agui.zk.client.monitor;
 
 import com.agui.zk.client.ZKClient;
-import com.agui.zk.client.common.TimeUtil;
+import com.agui.zk.client.util.TimeUtil;
 import com.agui.zk.client.constants.ZKConstants;
 
 import java.util.concurrent.atomic.AtomicBoolean;

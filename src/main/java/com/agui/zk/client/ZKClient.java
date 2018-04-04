@@ -1,13 +1,16 @@
 package com.agui.zk.client;
 
 import com.agui.zk.client.common.Logger;
-import com.agui.zk.client.common.TimeUtil;
+import com.agui.zk.client.util.TimeUtil;
 import com.agui.zk.client.constants.ZKConstants;
 import com.agui.zk.client.monitor.ZKClientMonitor;
 import com.agui.zk.client.operation.ConfigLoader;
+import com.agui.zk.client.util.ZKDecoder;
+import com.agui.zk.client.util.ZKEncoder;
 import com.alibaba.fastjson.JSON;
 import com.lingshou.util.logger.LoggerFactory;
 import com.lingshou.util.logger.LoggerWrapper;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.ACL;
@@ -29,7 +32,6 @@ public class ZKClient implements Watcher {
 
     static LoggerWrapper INFO = LoggerFactory.getValue(Logger.ZK_INFO);
 
-    static LoggerWrapper ERROR = LoggerFactory.getValue(Logger.ZK_ERROR);
     /**
      * 类变量
      */
@@ -83,6 +85,26 @@ public class ZKClient implements Watcher {
         }
     }
 
+
+    public void delete(String absPath){
+        try {
+            List<String> children = zookeeper.getChildren(absPath,false);
+            if (CollectionUtils.isNotEmpty(children)){
+                children.stream().forEach(item ->{
+                    if (item.equals("zookeeper")){
+                        return;
+                    }
+                    String childPath = absPath.endsWith("/") ? absPath + item : absPath + "/" + item;
+                    delete(childPath);
+                });
+            }
+            zookeeper.delete(absPath,-1);
+        } catch (Exception e) {
+            throw new RuntimeException("deleteR exception",e);
+        }
+    }
+
+
     public String getData(String path,Watcher watcher){
         try {
             Stat stat = zookeeper.exists(generatePath(path),false);
@@ -90,7 +112,7 @@ public class ZKClient implements Watcher {
             if (stat == null){
                 return null;
             }
-            return byte2Str(zookeeper.getData(generatePath(path),watcher,stat));
+            return ZKDecoder.decode(zookeeper.getData(generatePath(path),watcher,stat));
         } catch (Exception e) {
             throw new RuntimeException("getData exception",e);
         }
@@ -98,7 +120,7 @@ public class ZKClient implements Watcher {
 
     public boolean create(String path,String data){
         try {
-            String createPath = zookeeper.create(generatePath(path),str2Byte(data),defaultAcl(), CreateMode.PERSISTENT);
+            String createPath = zookeeper.create(generatePath(path), ZKEncoder.encode(data),defaultAcl(), CreateMode.PERSISTENT);
             return StringUtils.isNotBlank(createPath);
         } catch (Exception e) {
             throw new RuntimeException("exists excepiton",e);
@@ -107,7 +129,7 @@ public class ZKClient implements Watcher {
 
     public boolean createEphemeral(String path,String data){
         try {
-            String createPath = zookeeper.create(generatePath(path),str2Byte(data),defaultAcl(), CreateMode.EPHEMERAL);
+            String createPath = zookeeper.create(generatePath(path),ZKEncoder.encode(data),defaultAcl(), CreateMode.EPHEMERAL);
             return StringUtils.isNotBlank(createPath);
         } catch (Exception e) {
             throw new RuntimeException("exists excepiton",e);
@@ -116,7 +138,7 @@ public class ZKClient implements Watcher {
 
     public String create(String path, String data, CreateMode createMode) {
         try {
-            return zookeeper.create(generatePath(path), str2Byte(data), defaultAcl(), createMode);
+            return zookeeper.create(generatePath(path), ZKEncoder.encode(data), defaultAcl(), createMode);
         } catch (Exception e) {
             throw new RuntimeException("exists excepiton", e);
         }
@@ -124,7 +146,7 @@ public class ZKClient implements Watcher {
 
     public List<String> getChildren(String path) {
         try {
-            return zookeeper.getChildren(path, false);
+            return zookeeper.getChildren(generatePath(path), false);
         } catch (Exception e) {
             throw new RuntimeException("getChildren exception",e);
         }
@@ -137,23 +159,6 @@ public class ZKClient implements Watcher {
         acls.add(acl1);
         return acls;
     }
-
-    private byte[] str2Byte(String data){
-        try {
-            return data.getBytes(ZKConstants.defaultChraterSet);
-        } catch (Exception e) {
-            throw new RuntimeException("str2Byte error,data" + data,e);
-        }
-    }
-
-    private String byte2Str(byte[] data){
-        try {
-            return new String(data,ZKConstants.defaultChraterSet);
-        } catch (Exception e) {
-            throw new RuntimeException("str2Byte error,data" + data,e);
-        }
-    }
-
 
     private String generatePath(String path){
         return ZKConstants.basePath + path;

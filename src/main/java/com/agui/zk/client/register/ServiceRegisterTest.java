@@ -1,6 +1,6 @@
 package com.agui.zk.client.register;
 
-import com.agui.zk.client.common.TimeUtil;
+import com.agui.zk.client.util.TimeUtil;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
