@@ -58,9 +58,9 @@ public class DistributionLockTest {
 //            e.printStackTrace();
 //        }
 
-//        System.out.println(DistributionLock.acquire("lockKey",1));
-//        TimeUtil.sleep(5);
-//        DistributionLock.release();
+        System.out.println(DistributionLock.acquire("lockKey",1));
+        TimeUtil.sleep(5);
+        DistributionLock.release();
     }
 
 

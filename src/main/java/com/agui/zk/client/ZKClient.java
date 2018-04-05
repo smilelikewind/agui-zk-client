@@ -20,9 +20,7 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -121,17 +119,21 @@ public class ZKClient implements Watcher {
         }
     }
 
+
+    private static Map<CreateMode,CreateMode> createModeMapping = new HashMap<>();
+    static {
+        createModeMapping.put(CreateMode.EPHEMERAL,CreateMode.EPHEMERAL);
+        createModeMapping.put(CreateMode.EPHEMERAL_SEQUENTIAL,CreateMode.EPHEMERAL);
+        createModeMapping.put(CreateMode.PERSISTENT,CreateMode.PERSISTENT);
+        createModeMapping.put(CreateMode.PERSISTENT_SEQUENTIAL,CreateMode.PERSISTENT);
+    }
+
     public String create(String path, String data,CreateMode createMode) {
         try {
 
             if (StringUtils.isBlank(path)){
                 throw new IllegalArgumentException("argeument invalid");
             }
-
-            if (createMode != CreateMode.EPHEMERAL || createMode != CreateMode.PERSISTENT){
-                throw new UnsupportedOperationException("仅支持非顺序节点");
-            }
-
             String targetPath = PathUtil.preHandler(path);
             String nodePath = PathUtil.assemblePath(targetPath);
             int lastIndex = targetPath.lastIndexOf(ZKConstants.ZK_PATH_SPERATOR);
@@ -148,7 +150,7 @@ public class ZKClient implements Watcher {
 
             needAddNode.stream().forEach(item ->{
                 try {
-                    zookeeper.create(PathUtil.assemblePath(item),ZKEncoder.encode("-1"),defaultAcl(),createMode);
+                    zookeeper.create(PathUtil.assemblePath(item),ZKEncoder.encode("-1"),defaultAcl(),createModeMapping.get(createMode));
                 } catch (Exception e) {
                     throw new IllegalStateException("create wrong",e);
                 }
