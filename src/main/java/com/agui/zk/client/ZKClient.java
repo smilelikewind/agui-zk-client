@@ -128,6 +128,10 @@ public class ZKClient implements Watcher {
                 throw new IllegalArgumentException("argeument invalid");
             }
 
+            if (createMode != CreateMode.EPHEMERAL || createMode != CreateMode.PERSISTENT){
+                throw new UnsupportedOperationException("仅支持非顺序节点");
+            }
+
             String targetPath = PathUtil.preHandler(path);
             String nodePath = PathUtil.assemblePath(targetPath);
             int lastIndex = targetPath.lastIndexOf(ZKConstants.ZK_PATH_SPERATOR);

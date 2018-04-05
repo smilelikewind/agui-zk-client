@@ -5,8 +5,10 @@ import com.agui.zk.client.constants.ZKConstants;
 import com.agui.zk.client.util.TimeUtil;
 import org.apache.zookeeper.CreateMode;
 
+import java.sql.Time;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by gui.a on 2018/4/4.
@@ -38,7 +40,7 @@ public class DistributionLockTest {
             }
 
             TimeUtil.sleep(3);
-            DistributionLock.release("lockKey");
+            DistributionLock.release();
             latch.countDown();
         }
     }
@@ -55,10 +57,10 @@ public class DistributionLockTest {
 //        } catch (InterruptedException e) {
 //            e.printStackTrace();
 //        }
-//
-//        DistributionLock.acquire("lockKey",1);
 
-        ZKClient.getInstance().delete("/monitor");
+//        System.out.println(DistributionLock.acquire("lockKey",1));
+//        TimeUtil.sleep(5);
+//        DistributionLock.release();
     }
 
 

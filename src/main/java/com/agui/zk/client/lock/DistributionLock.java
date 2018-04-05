@@ -1,6 +1,7 @@
 package com.agui.zk.client.lock;
 
 import com.agui.zk.client.ZKClient;
+import com.agui.zk.client.constants.ZKConstants;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 
@@ -15,11 +16,20 @@ public class DistributionLock {
 
     private static ZKClient zkClient = ZKClient.getInstance();
 
+    private static ThreadLocal<LockContext> lockContextLocal = new ThreadLocal<LockContext>(){
+        @Override
+        public void set(LockContext value){
+            if (get() != null){
+                throw new IllegalStateException("get is not null");
+            }
+            super.set(value);
+        }
+    };
 
     static {
         Stat stat = zkClient.getState(LOCK_BASIC_PATH,null);
         if (stat == null){
-            zkClient.create(LOCK_BASIC_PATH,"DistributionLock", CreateMode.PERSISTENT);
+            zkClient.create(LOCK_BASIC_PATH,"on", CreateMode.PERSISTENT);
         }
     }
 
@@ -28,7 +38,8 @@ public class DistributionLock {
     }
 
     public static boolean acquire(String lockKey,int timeOut){
-        String path = zkClient.create( LOCK_BASIC_PATH + lockKey,"1",CreateMode.EPHEMERAL_SEQUENTIAL);
+        String path = zkClient.create( getLockKey(lockKey),"1",CreateMode.EPHEMERAL_SEQUENTIAL);
+        lockContextLocal.set(new LockContext().setLockKey(lockKey).setNodePath(path));
         ZKLockHandler zkLockHandler = new ZKLockHandler(path);
         if (zkLockHandler.isAcquired()){
             return true;
@@ -37,8 +48,15 @@ public class DistributionLock {
         return zkLockHandler.isSuccess();
     }
 
-    public static void release(String lockKey){
-        zkClient.delete(lockKey);
+    public static void release(){
+        LockContext lockContext = lockContextLocal.get();
+        lockContextLocal.remove();
+        zkClient.delete(lockContext.getNodePath());
+    }
+
+
+    private static String getLockKey(String lockKey){
+        return LOCK_BASIC_PATH + ZKConstants.ZK_PATH_SPERATOR+ lockKey + ZKConstants.ZK_PATH_SPERATOR + "lockNode";
     }
 
 }
