@@ -1,13 +1,15 @@
 package com.agui.zk.client;
 
 import com.agui.zk.client.common.Logger;
-import com.agui.zk.client.util.TimeUtil;
 import com.agui.zk.client.constants.ZKConstants;
 import com.agui.zk.client.monitor.ZKClientMonitor;
 import com.agui.zk.client.operation.ConfigLoader;
+import com.agui.zk.client.util.PathUtil;
+import com.agui.zk.client.util.TimeUtil;
 import com.agui.zk.client.util.ZKDecoder;
 import com.agui.zk.client.util.ZKEncoder;
 import com.alibaba.fastjson.JSON;
+import com.google.common.collect.Lists;
 import com.lingshou.util.logger.LoggerFactory;
 import com.lingshou.util.logger.LoggerWrapper;
 import org.apache.commons.collections.CollectionUtils;
@@ -17,7 +19,9 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,94 +55,110 @@ public class ZKClient implements Watcher {
 
 
     public ZKClient() {
-        if (IS_START.compareAndSet(false,true)){
+        if (IS_START.compareAndSet(false, true)) {
             try {
                 countDownLatch = new CountDownLatch(1);
                 this.zookeeper = new ZooKeeper(ZKConstants.zkServerAddress, ZKConstants.sessionTimeOut, this);
                 this.countDownLatch.await();
             } catch (Exception e) {
-                INFO.info("connect zk error,do restart",e);
+                INFO.info("connect zk error,do restart", e);
                 restart();
             }
         }
     }
 
-    public boolean exists(String path,Watcher watcher){
+    public boolean exists(String path, Watcher watcher) {
         try {
-            Stat stat = zookeeper.exists(generatePath(path),watcher);
+            Stat stat = zookeeper.exists(PathUtil.assemblePath(path), watcher);
             return stat != null;
         } catch (Exception e) {
-            throw new RuntimeException("exists excepiton",e);
+            throw new RuntimeException("exists excepiton", e);
         }
     }
 
-    public long getSessionId(){
+    public long getSessionId() {
         return zookeeper.getSessionId();
     }
 
-    public Stat getState(String path,Watcher watcher){
+    public Stat getState(String path, Watcher watcher) {
         try {
-            Stat stat = zookeeper.exists(generatePath(path),watcher);
+            Stat stat = zookeeper.exists(PathUtil.assemblePath(path), watcher);
             return stat;
         } catch (Exception e) {
-            throw new RuntimeException("getState excepiton",e);
+            throw new RuntimeException("getState excepiton", e);
         }
     }
 
 
-    public void delete(String absPath){
+    public void delete(String path) {
         try {
-            List<String> children = zookeeper.getChildren(absPath,false);
-            if (CollectionUtils.isNotEmpty(children)){
-                children.stream().forEach(item ->{
-                    if (item.equals("zookeeper")){
-                        return;
-                    }
-                    String childPath = absPath.endsWith("/") ? absPath + item : absPath + "/" + item;
-                    delete(childPath);
+
+            String nodePath = PathUtil.assemblePath(path);
+            List<String> children = zookeeper.getChildren(nodePath, false);
+
+            if (CollectionUtils.isNotEmpty(children)) {
+                children.stream().forEach(item -> {
+                    delete(path + ZKConstants.ZK_PATH_SPERATOR + item);
                 });
             }
-            zookeeper.delete(absPath,-1);
+            zookeeper.delete(nodePath, -1);
         } catch (Exception e) {
-            throw new RuntimeException("deleteR exception",e);
+            throw new RuntimeException("delete exception", e);
         }
     }
 
 
-    public String getData(String path,Watcher watcher){
+    public String getData(String path, Watcher watcher) {
         try {
-            Stat stat = zookeeper.exists(generatePath(path),false);
+            Stat stat = zookeeper.exists(PathUtil.assemblePath(path), false);
 
-            if (stat == null){
+            if (stat == null) {
                 return null;
             }
-            return ZKDecoder.decode(zookeeper.getData(generatePath(path),watcher,stat));
+            return ZKDecoder.decode(zookeeper.getData(PathUtil.assemblePath(path), watcher, stat));
         } catch (Exception e) {
-            throw new RuntimeException("getData exception",e);
+            throw new RuntimeException("getData exception", e);
         }
     }
 
-    public boolean create(String path,String data){
+    public String create(String path, String data,CreateMode createMode) {
         try {
-            String createPath = zookeeper.create(generatePath(path), ZKEncoder.encode(data),defaultAcl(), CreateMode.PERSISTENT);
+
+            if (StringUtils.isBlank(path)){
+                throw new IllegalArgumentException("argeument invalid");
+            }
+
+            String targetPath = PathUtil.preHandler(path);
+            String nodePath = PathUtil.assemblePath(targetPath);
+            int lastIndex = targetPath.lastIndexOf(ZKConstants.ZK_PATH_SPERATOR);
+            List<String > needAddNode = Lists.newArrayList();
+            String parentPath = targetPath;
+
+            while (lastIndex != -1 && zookeeper.exists(PathUtil.assemblePath(parentPath.substring(0,lastIndex)),null)== null){
+                parentPath = parentPath.substring(0,lastIndex);
+                needAddNode.add(parentPath);
+                lastIndex = parentPath.lastIndexOf(ZKConstants.ZK_PATH_SPERATOR);
+            }
+
+            Collections.reverse(needAddNode);
+
+            needAddNode.stream().forEach(item ->{
+                try {
+                    zookeeper.create(PathUtil.assemblePath(item),ZKEncoder.encode("-1"),defaultAcl(),createMode);
+                } catch (Exception e) {
+                    throw new IllegalStateException("create wrong",e);
+                }
+            });
+            return zookeeper.create(nodePath, ZKEncoder.encode(data), defaultAcl(), createMode);
+        } catch (Exception e) {
+            throw new RuntimeException("exists excepiton", e);
+        }
+    }
+
+    public boolean createEphemeral(String path, String data) {
+        try {
+            String createPath = zookeeper.create(PathUtil.assemblePath(path), ZKEncoder.encode(data), defaultAcl(), CreateMode.EPHEMERAL);
             return StringUtils.isNotBlank(createPath);
-        } catch (Exception e) {
-            throw new RuntimeException("exists excepiton",e);
-        }
-    }
-
-    public boolean createEphemeral(String path,String data){
-        try {
-            String createPath = zookeeper.create(generatePath(path),ZKEncoder.encode(data),defaultAcl(), CreateMode.EPHEMERAL);
-            return StringUtils.isNotBlank(createPath);
-        } catch (Exception e) {
-            throw new RuntimeException("exists excepiton",e);
-        }
-    }
-
-    public String create(String path, String data, CreateMode createMode) {
-        try {
-            return zookeeper.create(generatePath(path), ZKEncoder.encode(data), defaultAcl(), createMode);
         } catch (Exception e) {
             throw new RuntimeException("exists excepiton", e);
         }
@@ -146,47 +166,43 @@ public class ZKClient implements Watcher {
 
     public List<String> getChildren(String path) {
         try {
-            return zookeeper.getChildren(generatePath(path), false);
+            return zookeeper.getChildren(PathUtil.assemblePath(path), false);
         } catch (Exception e) {
-            throw new RuntimeException("getChildren exception",e);
+            throw new RuntimeException("getChildren exception", e);
         }
     }
 
-    private List<ACL> defaultAcl(){
+    private List<ACL> defaultAcl() {
         List<ACL> acls = new ArrayList<ACL>();
-        Id id1 = new Id("world","anyone");
+        Id id1 = new Id("world", "anyone");
         ACL acl1 = new ACL(ZooDefs.Perms.ALL, id1);
         acls.add(acl1);
         return acls;
     }
 
-    private String generatePath(String path){
-        return ZKConstants.basePath + path;
-    }
-
-    public boolean isActive(){
+    public boolean isActive() {
         return zookeeper != null && zookeeper.getState().isAlive();
     }
 
-    public boolean isConnected(){
+    public boolean isConnected() {
         return zookeeper != null && zookeeper.getState().isConnected();
     }
 
-    private static void restart(){
+    private static void restart() {
         zk.close();
         TimeUtil.sleep(15);
         ZKClient.getInstance();
     }
 
 
-    public void close(){
+    public void close() {
         if (IS_START.compareAndSet(false, true)) {
             zk = null;
             countDownLatch = null;
             try {
                 zookeeper.close();
             } catch (InterruptedException e) {
-                throw new RuntimeException("close zk error",e);
+                throw new RuntimeException("close zk error", e);
             }
         }
     }
@@ -214,17 +230,12 @@ public class ZKClient implements Watcher {
         if (event != null && event.getState() == Event.KeeperState.SyncConnected) {
             System.out.println("zk connected success");
             this.countDownLatch.countDown();
-        } else if (event != null && event.getState() == Event.KeeperState.Expired){
+        } else if (event != null && event.getState() == Event.KeeperState.Expired) {
             // 链接失效后，需要清除watcher
             // 数据暂时不清理
             ConfigLoader.clearWathcer();
             restart();
         }
         INFO.info("[ZKClient] zk event is: " + JSON.toJSONString(event));
-    }
-
-    public static void main(String[] args) {
-        ZKClient.getInstance().create("sss","xiaowei");
-        System.out.println(ZKClient.getInstance().getData("sss",null));
     }
 }

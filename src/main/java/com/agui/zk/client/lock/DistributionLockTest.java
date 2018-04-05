@@ -1,6 +1,9 @@
 package com.agui.zk.client.lock;
 
+import com.agui.zk.client.ZKClient;
+import com.agui.zk.client.constants.ZKConstants;
 import com.agui.zk.client.util.TimeUtil;
+import org.apache.zookeeper.CreateMode;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -53,7 +56,9 @@ public class DistributionLockTest {
 //            e.printStackTrace();
 //        }
 //
-        DistributionLock.acquire("lockKey",1);
+//        DistributionLock.acquire("lockKey",1);
+
+        ZKClient.getInstance().delete("/monitor");
     }
 
 

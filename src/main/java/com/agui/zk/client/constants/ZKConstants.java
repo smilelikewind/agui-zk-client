@@ -1,5 +1,8 @@
 package com.agui.zk.client.constants;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Created by gui.a on 2018/3/14.
  *
@@ -15,7 +18,8 @@ public class ZKConstants {
      */
     public static int sessionTimeOut = 2000;
     public static int zkMonitorExecuteIntervalTime = 1000;
-    public static String basePath = "/data/zkclient/";
+    public static String APPLICATION_BASE_PATH = "/data/zkclient/";
+    public static String ZK_PATH_SPERATOR = "/";
 
     public static String defaultChraterSet = "utf-8";
 
