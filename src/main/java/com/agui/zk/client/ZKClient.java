@@ -119,15 +119,6 @@ public class ZKClient implements Watcher {
         }
     }
 
-
-    private static Map<CreateMode,CreateMode> createModeMapping = new HashMap<>();
-    static {
-        createModeMapping.put(CreateMode.EPHEMERAL,CreateMode.EPHEMERAL);
-        createModeMapping.put(CreateMode.EPHEMERAL_SEQUENTIAL,CreateMode.EPHEMERAL);
-        createModeMapping.put(CreateMode.PERSISTENT,CreateMode.PERSISTENT);
-        createModeMapping.put(CreateMode.PERSISTENT_SEQUENTIAL,CreateMode.PERSISTENT);
-    }
-
     public String create(String path, String data,CreateMode createMode) {
         try {
 
@@ -150,7 +141,7 @@ public class ZKClient implements Watcher {
 
             needAddNode.stream().forEach(item ->{
                 try {
-                    zookeeper.create(PathUtil.assemblePath(item),ZKEncoder.encode("-1"),defaultAcl(),createModeMapping.get(createMode));
+                    zookeeper.create(PathUtil.assemblePath(item),ZKEncoder.encode("-1"),defaultAcl(),CreateMode.PERSISTENT);
                 } catch (Exception e) {
                     throw new IllegalStateException("create wrong",e);
                 }
